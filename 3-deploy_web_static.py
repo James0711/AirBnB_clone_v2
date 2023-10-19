@@ -5,12 +5,7 @@ import time
 from fabric.api import local
 from fabric.operations import env, put, run
 
-<<<<<<< HEAD
-env.hosts = ["100.25.142.101", "54.198.32.110"]
-=======
 env.hosts = ['100.25.142.101", "54.198.32.110']
-
->>>>>>> 73b67924f9c8d0bba28f23f9ac3defa4659a6c29
 
 def do_pack():
     """Generate an tgz archive from web_static folder"""
