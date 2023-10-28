@@ -1,63 +1,56 @@
-# Setup the web servers for the deployment of web_static
-exec { '/usr/bin/env apt -y update' : }
--> package { 'nginx':
-  ensure => installed,
+# This script sets up webservers for the deployment of the webstatic
+
+# Update and install nginx if it doesnt exist
+exec {'update':
+  provider => shell,
+  command  => 'apt-get -y update',
 }
--> file { '/data':
-  ensure  => 'directory'
+
+package {'nginx':
+  ensure   => installed,
+  provider => 'apt',
 }
--> file { '/data/web_static':
-  ensure => 'directory'
+
+# create folders if they don't exist exits
+exec {'folders':
+  provider => shell,
+  command  => 'mkdir -p /data/web_static/releases/test/ /data/web_static/shared/',
 }
--> file { '/data/web_static/releases':
-  ensure => 'directory'
+
+# create an html file with fake content to test configuration
+exec {'test':
+  command => '/bin/echo -e "<html>\n\t<head>\n\t</head>\n\t<body>\n\t\t<h1>Hello ALX</h1>\n\t</body>\n</html>" > /data/web_static/releases/test/index.html',
+  path    => '/bin',
 }
--> file { '/data/web_static/releases/test':
-  ensure => 'directory'
+
+# remove the symbolic link if exist and recreate it
+exec {'remove-old-link':
+  provider => shell,
+  command  => 'rm -rf /data/web_static/current; ln -s /data/web_static/releases/test/ /data/web_static/current',
 }
--> file { '/data/web_static/shared':
-  ensure => 'directory'
+
+# give ownership to the user and group ubuntu
+exec {'ownership':
+  provider => shell,
+  command  => 'chown -R ubuntu:ubuntu /data/',
 }
--> file { '/data/web_static/releases/test/index.html':
-  ensure  => 'present',
-  content => "<!DOCTYPE html>
-<html>
-  <head>
-  </head>
-  <body>
-    <p>Nginx server test</p>
-  </body>
-</html>"
+
+service {'nginx':
+  ensure  => 'running',
+  enable  => true,
+  require => Package['nginx'],
 }
--> file { '/data/web_static/current':
-  ensure => 'link',
-  target => '/data/web_static/releases/test'
+
+# update the nginx config the content of /data/web_static/current/ to hbnb_static
+exec {'configure':
+  command => '/bin/sed -i "s/^\\s*location \\/ {/\\tlocation \\/hbnb_static {\\n\\t\\talias \\/data\\/web_static\\/current\\/;\\n\\t}\\n\\n&/" /etc/nginx/sites-enabled/default',
+  path    => '/bin',
+  unless  => '/bin/grep -q "^\\s*location \\/hbnb_static {" /etc/nginx/sites-enabled/default',
 }
--> exec { 'chown -R ubuntu:ubuntu /data/':
-  path => '/usr/bin/:/usr/local/bin/:/bin/'
-}
--> file { '/var/www':
-  ensure => 'directory'
-}
--> file { '/var/www/html':
-  ensure => 'directory'
-}
--> file { '/var/www/html/index.html':
-  ensure  => 'present',
-  content => "<!DOCTYPE html>
-<html>
-  <head>
-  </head>
-  <body>
-    <p>Nginx server test</p>
-  </body>
-</html>"
-}
-exec { 'nginx_conf':
-  environment => ['data=\ \tlocation /hbnb_static {\n\t\talias /data/web_static/current;\n\t}\n'],
-  command     => 'sed -i "39i $data" /etc/nginx/sites-enabled/default',
-  path        => '/usr/bin:/usr/sbin:/bin:/usr/local/bin'
-}
--> service { 'nginx':
-  ensure => running,
+
+# restart the server
+exec {'restart':
+  command     => '/usr/sbin/service nginx restart',
+  refreshonly => true,
+  subscribe   => Service['nginx'],
 }
