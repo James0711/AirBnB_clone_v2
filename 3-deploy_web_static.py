@@ -5,7 +5,7 @@ from datetime import datetime
 from os.path import isfile
 
 
-env.hosts = ["100.25.30.148", "35.175.105.87"]
+env.hosts = ["100.25.142.101", "54.198.32.110"]
 env.user = "ubuntu"
 
 
